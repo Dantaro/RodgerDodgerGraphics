@@ -2,6 +2,7 @@
 #include "Art.h"
 #include "Constants.h"
 #include "GameLib.h"
+#include "EEPROM.h"
 
 //CONSTANTS
 // Make an instance of arduboy used for many functions
@@ -18,6 +19,9 @@ static short activeEnemyNumber = arr_length(enemies); //Default to max size
 static int score;
 static int unsigned frameCount;
 static int lastScoreMilestone;
+
+//EEPROM info
+static int eepromAddress = 10;
 
 //Game State
 #define GAME_STATE_SPLASH_SCREEN        0
@@ -237,6 +241,10 @@ static void victoryState() {
 }
 
 static void deathState() {
+  //Save Score to EEPROM
+  if (gameMode == GAME_MODE_INFINITE && score > getHighScore()) {
+    saveHighScore(score);
+  }
   char loseText[] = "You lose!";
   arduboy.setCursor((CENTER_X - (sizeof(loseText) * CHAR_WIDTH / 2)), CENTER_Y);
   arduboy.print(loseText);
@@ -312,6 +320,14 @@ static void gameModeMenu() {
     }
     arduboy.setCursor(6, textY);
     arduboy.print("Endless RodgerDodger");
+
+    textY = textY + CHAR_HEIGHT + 3;
+    arduboy.setCursor(6, textY);
+    arduboy.print("Endless High Score: ");
+    textY = textY + CHAR_HEIGHT + 3;
+    arduboy.setCursor(40, textY);
+    arduboy.print(getHighScore());
+    
     
     if (arduboy.pressed(A_BUTTON)) {
       if (pointerLocation == 0) {
@@ -338,3 +354,38 @@ static void gameModeMenu() {
   
 }
 
+int getHighScore() {
+  return EEPROMReadLong(eepromAddress);
+}
+
+void saveHighScore(int score) {
+  EEPROMWriteLong(eepromAddress, score);
+}
+
+void EEPROMWriteLong(int address, long value)
+{
+  //Decomposition from a long to 4 bytes by using bitshift.
+  //One = Most significant -> Four = Least significant byte
+  byte four = (value & 0xFF);
+  byte three = ((value >> 8) & 0xFF);
+  byte two = ((value >> 16) & 0xFF);
+  byte one = ((value >> 24) & 0xFF);
+
+  //Write the 4 bytes into the eeprom memory.
+  EEPROM.write(address, four);
+  EEPROM.write(address + 1, three);
+  EEPROM.write(address + 2, two);
+  EEPROM.write(address + 3, one);
+}
+
+long EEPROMReadLong(long address)
+{
+  //Read the 4 bytes from the eeprom memory.
+  long four = EEPROM.read(address);
+  long three = EEPROM.read(address + 1);
+  long two = EEPROM.read(address + 2);
+  long one = EEPROM.read(address + 3);
+
+  //Return the recomposed long by using bitshift.
+  return ((four << 0) & 0xFF) + ((three << 8) & 0xFFFF) + ((two << 16) & 0xFFFFFF) + ((one << 24) & 0xFFFFFFFF);
+}
