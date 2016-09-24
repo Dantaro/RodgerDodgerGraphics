@@ -21,7 +21,7 @@ static int unsigned frameCount;
 static int lastScoreMilestone;
 
 //EEPROM info
-static int eepromAddress = 10;
+static int eepromAddress = EEPROM_STORAGE_SPACE_START;
 
 //Game State
 #define GAME_STATE_SPLASH_SCREEN        0
